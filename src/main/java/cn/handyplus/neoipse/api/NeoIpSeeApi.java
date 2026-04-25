@@ -6,7 +6,29 @@ import org.bukkit.entity.Player;
 import java.util.function.Consumer;
 
 /**
- * API 类
+ * neoipSee API 类
+ * 提供了查询玩家IP地域信息的各种方法
+ *
+ * <h2>使用示例：</h2>
+ * <pre>
+ * // 同步获取玩家地域信息
+ * String region = NeoIpSeeApi.getRegion(player);
+ * player.sendMessage("您的地域信息: " + region);
+ *
+ * // 异步获取玩家地域信息
+ * NeoIpSeeApi.getRegionAsync(player, region -> {
+ *     player.sendMessage("您的地域信息: " + region);
+ * });
+ *
+ * // 获取玩家国家信息
+ * String country = NeoIpSeeApi.getNational(player);
+ * player.sendMessage("您的国家: " + country);
+ *
+ * // 异步获取玩家省份信息
+ * NeoIpSeeApi.getProvinceAsync(player, province -> {
+ *     player.sendMessage("您的省份: " + province);
+ * });
+ * </pre>
  *
  * @author 滔天
  */

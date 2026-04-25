@@ -39,6 +39,21 @@ public class CacheManager {
     private static final long CACHE_EXPIRE_TIME = 3600000L; // 1小时
 
     /**
+     * 清理计数器，用于控制清理频率
+     */
+    private int cleanCounter = 0;
+
+    /**
+     * 清理阈值，当操作次数达到此值时执行清理
+     */
+    private static final int CLEAN_THRESHOLD = 100;
+
+    /**
+     * 当缓存超过大小时，删除的条目数量
+     */
+    private static final int CLEAN_BATCH_SIZE = 10;
+
+    /**
      * 私有构造方法
      */
     private CacheManager() {
@@ -71,7 +86,14 @@ public class CacheManager {
      * @return 缓存值
      */
     public String get(String key) {
-        clearExpiredCache();
+        // 增加清理计数器
+        cleanCounter++;
+        // 当计数器达到阈值时执行清理
+        if (cleanCounter >= CLEAN_THRESHOLD) {
+            cleanCounter = 0;
+            clearExpiredCache();
+        }
+        
         if (ipRegionCache.containsKey(key)) {
             // 更新时间戳，延长缓存时间
             cacheTimestampMap.put(key, System.currentTimeMillis());
@@ -89,7 +111,14 @@ public class CacheManager {
     public void put(String key, String value) {
         ipRegionCache.put(key, value);
         cacheTimestampMap.put(key, System.currentTimeMillis());
-        clearExpiredCache();
+        
+        // 增加清理计数器
+        cleanCounter++;
+        // 当计数器达到阈值时执行清理
+        if (cleanCounter >= CLEAN_THRESHOLD) {
+            cleanCounter = 0;
+            clearExpiredCache();
+        }
     }
 
     /**
@@ -115,23 +144,23 @@ public class CacheManager {
             cacheTimestampMap.remove(key);
         }
         
-        // 检查缓存大小，如果超过限制，删除最旧的条目
+        // 检查缓存大小，如果超过限制，删除多个最旧的条目
         if (ipRegionCache.size() > maxCacheSize) {
-            // 找出最早的时间戳
-            String oldestKey = null;
-            long oldestTime = Long.MAX_VALUE;
+            // 计算需要删除的条目数量
+            int toRemove = Math.min(CLEAN_BATCH_SIZE, ipRegionCache.size() - maxCacheSize);
             
-            for (Map.Entry<String, Long> entry : cacheTimestampMap.entrySet()) {
-                if (entry.getValue() < oldestTime) {
-                    oldestTime = entry.getValue();
-                    oldestKey = entry.getKey();
-                }
-            }
+            // 找出最旧的条目
+            List<Map.Entry<String, Long>> entryList = new ArrayList<>(cacheTimestampMap.entrySet());
+            // 按时间戳排序
+            entryList.sort(Map.Entry.comparingByValue());
             
             // 删除最旧的条目
-            if (oldestKey != null) {
-                ipRegionCache.remove(oldestKey);
-                cacheTimestampMap.remove(oldestKey);
+            for (int i = 0; i < toRemove; i++) {
+                if (i < entryList.size()) {
+                    String key = entryList.get(i).getKey();
+                    ipRegionCache.remove(key);
+                    cacheTimestampMap.remove(key);
+                }
             }
         }
     }

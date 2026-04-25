@@ -35,7 +35,7 @@
         <HandyLib.version>3.7.8</HandyLib.version>
         <placeholderapi.version>2.11.7</placeholderapi.version>
         <junit.version>5.13.2</junit.version>
-        <spigot-api.version>26.1.2-R0.1-SNAPSHOT</spigot-api.version>
+        <spigot-api.version>1.21.8-R0.1-SNAPSHOT</spigot-api.version>
         <lombok.version>1.18.40</lombok.version>
     </properties>
 
