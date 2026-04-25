@@ -60,10 +60,10 @@ public class NeoIpSee extends JavaPlugin {
         List<String> asciiArt = Arrays.asList( 
         "",
         " _   _             ___ ____   _____    ",
-        "| \\ | | ___ ___ | ___| _ \\ / ___/  __",
-        "|  \\| |/ _ \\/ _ \\  | | |_ \\ __\\/ _ \\",
+        "| \\ | | ___ ___ | ___| _ \\ /___/  __",
+        "|  \\| |/ _ \\/ _ \\  | | |_ \\__\\/ _ \\",
         "| |\\ | __ / (_) | | |  __ /| ___ / // __/",
-        "|_| \\_|\\___/\\___/ |___|_|  /____/\\___/"
+        "|_| \\_|\\___/\\___/ |___|_| /____/\\___/"
 );
         for (String line : asciiArt) {
             MessageUtil.sendConsoleMessage(ChatColor.DARK_AQUA + line);
