@@ -428,7 +428,7 @@ A: 是的，部分数据源支持 IPv6 地址查询，包括 IPPlus、IPInfo、I
 
 ## 📞 联系方式
 
-- **作者**: 滔天
+- **作者**: 滔天 QQ:3412163124
 - **项目地址**: https://github.com/qiuxiantao/neoipse
 - **Wiki**: https://github.com/qiuxiantao/neoipse/wiki
 
