@@ -1,0 +1,42 @@
+name: neoipSee
+main: cn.handyplus.neoipse.NeoIpSee
+version: 1.0.0
+author: 作者:滔天qq3412163124
+api-version: 26.1
+website: https://github.com/qiuxiantao/neoipse
+depend: [ PlaceholderAPI ]
+softdepend: [ AuthMe, CatSeedLogin, OauthLogin ]
+description: 玩家地域查询插件
+folia-supported: true
+commands:
+  neoipse:
+    description: 玩家地域查询
+    aliases: [ ip, nip ]
+permissions:
+  neoipse.*:
+    description: 玩家地域查询
+    children:
+      neoipse.reload: true
+      neoipse.toggle: true
+      neoipse.show: true
+      neoipse.hide: true
+      neoipse.query: true
+      neoipse.query.other: true
+  neoipse.reload:
+    description: 重新加载配置
+    default: op
+  neoipse.toggle:
+    description: 切换是否显示
+    default: true
+  neoipse.show:
+    description: 切换显示
+    default: true
+  neoipse.hide:
+    description: 切换隐藏
+    default: true
+  neoipse.query:
+    description: 查询地域信息
+    default: true
+  neoipse.query.other:
+    description: 查询其他玩家的地域信息
+    default: op

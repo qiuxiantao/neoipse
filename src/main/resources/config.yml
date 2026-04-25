@@ -1,0 +1,26 @@
+
+# 语言文件选择
+language: zh_CN
+# 数据源: fallback/ip9/ipquery/ipplus360/ipapi/whois/voreapi
+# fallback: 自动切换模式，优先使用ip9，失败后自动尝试whois和ipquery（推荐）
+# ip9: https://ip9.com.cn (完全免费，支持IPv4和IPv6，推荐)
+# ipquery: https://ipquery.io (完全免费，无需API密钥)
+# ipplus360: https://www.ip360.net.cn (需要配置密钥，高精度)
+# ipapi: https://ip-api.com (免费，有限制，可能对中国IP返回403)
+# whois: https://whois.pconline.com.cn (免费，国内精度高，推荐作为fallback备用)
+# voreapi: https://api.vore.top (免费，已验证不可用，不推荐)
+dataSource: fallback
+# 是否移除省份和城市
+removeProvinceAndCity: false
+# 未知显示
+unknown: 未知
+# 本地ip显示
+local: 内网IP
+# 开启检查更新
+isCheckUpdate: true
+# 有新版本是否发送给op提示
+isCheckUpdateToOpMsg: true
+# ipplus360数据源的ipv4密钥
+ipPlus360Ipv4Key: 123456
+# ipplus360数据源的ipv6密钥
+ipPlus360Ipv6Key: 123456
