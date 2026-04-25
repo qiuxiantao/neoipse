@@ -23,7 +23,7 @@ public class FallbackIpDataSource implements IpDataSource {
     public String getRegion(String ip) {
         List<String> triedDataSources = new ArrayList<>();
 
-        // 获取按权重和健康状态排序的数据源
+        // 获取按权重排序的数据源
         List<DataSourceManager.DataSourceInfo> sortedDataSources = dataSourceManager.getSortedDataSources();
 
         for (DataSourceManager.DataSourceInfo info : sortedDataSources) {
@@ -34,14 +34,12 @@ public class FallbackIpDataSource implements IpDataSource {
             try {
                 String region = dataSource.getRegion(ip);
                 if (region != null && !region.isEmpty()) {
-                    // 不再重复记录，因为 AbstractIpDataSource 会自动记录
                     if (triedDataSources.size() > 1) {
                         MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] " + dataSourceName + " 数据源成功返回结果");
                     }
                     return region;
                 }
             } catch (Exception e) {
-                // 不再重复记录，因为 AbstractIpDataSource 会自动记录
                 MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] " + dataSourceName + " 数据源查询失败: " + e.getMessage());
             }
         }
