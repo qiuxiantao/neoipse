@@ -122,9 +122,6 @@ public class NeoIpSee extends JavaPlugin {
         // 关闭缓存管理器的预热线程池
         CacheManager.getInstance().shutdown();
 
-        // 关闭数据源管理的调度线程池
-        cn.handyplus.neoipse.util.DataSourceManager.getInstance().shutdown();
-
         // 关闭HTTP工具的线程池
         cn.handyplus.neoipse.util.HttpUtil.getInstance().shutdown();
 
