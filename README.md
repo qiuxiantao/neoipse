@@ -1,7 +1,7 @@
 
 <div align="center">
 
-# neoipSee
+# NeoIpSee
 
 一个功能强大、高性能的 Minecraft 服务器 IP 地域查询插件
 
