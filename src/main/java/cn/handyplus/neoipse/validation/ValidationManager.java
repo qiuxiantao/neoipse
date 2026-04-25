@@ -83,6 +83,19 @@ public class ValidationManager {
     }
 
     /**
+     * 验证并清理API密钥
+     *
+     * @param apiKey API密钥
+     * @return 清理后的API密钥，无效则返回null
+     */
+    public String sanitizeApiKey(String apiKey) {
+        if (apiKey == null || apiKey.isEmpty() || apiKey.equals("123456")) {
+            return null;
+        }
+        return apiKey.trim();
+    }
+
+    /**
      * 掩码API密钥
      *
      * @param apiKey API密钥

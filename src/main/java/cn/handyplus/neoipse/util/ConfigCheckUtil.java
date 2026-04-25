@@ -3,12 +3,15 @@ package cn.handyplus.neoipse.util;
 import cn.handyplus.lib.util.MessageUtil;
 import cn.handyplus.neoipse.NeoIpSee;
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -20,6 +23,7 @@ public class ConfigCheckUtil {
 
     private static final List<String> VALID_DATA_SOURCES = new ArrayList<>();
     private static final List<String> VALID_LANGUAGES = new ArrayList<>();
+    private static final int CURRENT_CONFIG_VERSION = 3; // 配置文件版本号
 
     static {
         VALID_DATA_SOURCES.add("fallback");
@@ -55,6 +59,12 @@ public class ConfigCheckUtil {
 
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         boolean needsSave = false;
+        boolean needBackup = false;
+
+        // 检查配置文件版本
+        if (!checkConfigVersion(config)) {
+            needBackup = true;
+        }
 
         // 检查 language 配置
         String language = config.getString("language");
@@ -72,40 +82,103 @@ public class ConfigCheckUtil {
             needsSave = true;
         }
 
-        // 检查必需的键是否存在
+        // 检查 removeProvinceAndCity
         if (!config.contains("removeProvinceAndCity")) {
+            config.set("removeProvinceAndCity", false);
+            needsSave = true;
+        } else if (!(config.get("removeProvinceAndCity") instanceof Boolean)) {
+            MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 警告: removeProvinceAndCity 配置类型错误，已自动修复为 false");
             config.set("removeProvinceAndCity", false);
             needsSave = true;
         }
 
+        // 检查 unknown (v3 更新为 boolean 类型)
         if (!config.contains("unknown")) {
-            config.set("unknown", "未知");
+            config.set("unknown", true);
+            needsSave = true;
+        } else if (!(config.get("unknown") instanceof Boolean)) {
+            MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 警告: unknown 配置类型错误，已自动修复为 true");
+            config.set("unknown", true);
             needsSave = true;
         }
 
+        // 检查 local
         if (!config.contains("local")) {
+            config.set("local", "内网IP");
+            needsSave = true;
+        } else if (!(config.get("local") instanceof String)) {
+            MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 警告: local 配置类型错误，已自动修复为 '内网IP'");
             config.set("local", "内网IP");
             needsSave = true;
         }
 
+        // 检查 isCheckUpdate
         if (!config.contains("isCheckUpdate")) {
+            config.set("isCheckUpdate", true);
+            needsSave = true;
+        } else if (!(config.get("isCheckUpdate") instanceof Boolean)) {
+            MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 警告: isCheckUpdate 配置类型错误，已自动修复为 true");
             config.set("isCheckUpdate", true);
             needsSave = true;
         }
 
+        // 检查 isCheckUpdateToOpMsg
         if (!config.contains("isCheckUpdateToOpMsg")) {
+            config.set("isCheckUpdateToOpMsg", true);
+            needsSave = true;
+        } else if (!(config.get("isCheckUpdateToOpMsg") instanceof Boolean)) {
+            MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 警告: isCheckUpdateToOpMsg 配置类型错误，已自动修复为 true");
             config.set("isCheckUpdateToOpMsg", true);
             needsSave = true;
         }
 
+        // 检查 ipPlus360Ipv4Key
         if (!config.contains("ipPlus360Ipv4Key")) {
             config.set("ipPlus360Ipv4Key", "123456");
             needsSave = true;
         }
 
+        // 检查 ipPlus360Ipv6Key
         if (!config.contains("ipPlus360Ipv6Key")) {
             config.set("ipPlus360Ipv6Key", "123456");
             needsSave = true;
+        }
+
+        // 检查 cache 配置段
+        if (!config.contains("cache")) {
+            config.createSection("cache");
+            needsSave = true;
+        }
+
+        ConfigurationSection cacheSection = config.getConfigurationSection("cache");
+        if (cacheSection != null) {
+            // 检查 cache.maxSize
+            if (!cacheSection.contains("maxSize")) {
+                cacheSection.set("maxSize", 1000);
+                needsSave = true;
+            } else if (!(cacheSection.get("maxSize") instanceof Integer) || cacheSection.getInt("maxSize") <= 0) {
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 警告: cache.maxSize 配置无效，已自动修复为 1000");
+                cacheSection.set("maxSize", 1000);
+                needsSave = true;
+            }
+
+            // 检查 cache.preheatIps (可选，不需要强制检查)
+            if (!cacheSection.contains("preheatIps")) {
+                cacheSection.set("preheatIps", new ArrayList<>());
+                needsSave = true;
+            }
+        }
+
+        // 更新配置版本号
+        if (!config.contains("configVersion") || config.getInt("configVersion") != CURRENT_CONFIG_VERSION) {
+            config.set("configVersion", CURRENT_CONFIG_VERSION);
+            needsSave = true;
+            needBackup = true;
+        }
+
+        // 如果需要备份，先备份旧配置
+        if (needBackup) {
+            backupConfig(configFile);
         }
 
         // 保存修复后的配置
@@ -118,6 +191,43 @@ public class ConfigCheckUtil {
             }
         } else {
             MessageUtil.sendConsoleMessage(ChatColor.GREEN + "[neoipSee] 配置文件检查通过");
+        }
+    }
+
+    /**
+     * 检查配置文件版本
+     *
+     * @param config 配置文件
+     * @return 是否需要更新
+     */
+    private static boolean checkConfigVersion(FileConfiguration config) {
+        int version = config.getInt("configVersion", 0);
+        if (version < CURRENT_CONFIG_VERSION) {
+            MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 检测到旧版配置文件 (v" + version + ")，将自动升级到 v" + CURRENT_CONFIG_VERSION);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 备份配置文件
+     *
+     * @param configFile 配置文件
+     */
+    private static void backupConfig(File configFile) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+            String backupName = "config_backup_" + sdf.format(new Date()) + ".yml";
+            File backupFile = new File(NeoIpSee.INSTANCE.getDataFolder(), backupName);
+
+            // 复制文件
+            if (configFile.exists() && configFile.length() > 0) {
+                FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+                config.save(backupFile);
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 已备份旧配置文件到: " + backupName);
+            }
+        } catch (IOException e) {
+            MessageUtil.sendConsoleMessage(ChatColor.RED + "[neoipSee] 备份配置文件失败: " + e.getMessage());
         }
     }
 
@@ -146,25 +256,25 @@ public class ConfigCheckUtil {
                 }
                 break;
             case "fallback":
-                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: fallback 模式会自动切换数据源，优先使用 IPPlus");
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: fallback 模式会自动切换数据源");
                 break;
             case "ipplus":
-                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IPPlus 模式完全免费，支持IPv4和IPv6，返回详细地理信息");
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IPPlus 模式完全免费，支持IPv4和IPv6");
                 break;
             case "ipinfo":
-                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IPinfo 模式完全免费，支持IPv4和IPv6，提供国家级别和ASN信息");
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IPinfo 模式完全免费");
                 break;
             case "ip9":
                 MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IP9 模式完全免费，支持IPv4和IPv6");
                 break;
             case "ipquery":
-                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IPQuery 模式完全免费，无需API密钥");
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IPQuery 模式完全免费");
                 break;
             case "whois":
-                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: WHOIS 模式国内精度高，海外IP可能返回较少信息");
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: WHOIS 模式国内精度高");
                 break;
             case "ipapi":
-                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IPAPI 模式免费但有速率限制，可能对中国IP返回403");
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] 提示: IPAPI 模式免费但有速率限制");
                 break;
             case "voreapi":
                 MessageUtil.sendConsoleMessage(ChatColor.RED + "[neoipSee] 警告: VoreAPI 可能已不可用，建议使用 fallback 或 ip9");

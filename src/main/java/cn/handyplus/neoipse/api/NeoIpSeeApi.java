@@ -1,6 +1,7 @@
 package cn.handyplus.neoipse.api;
 
 import cn.handyplus.neoipse.util.IpUtil;
+import cn.handyplus.neoipse.util.RegionUtil;
 import org.bukkit.entity.Player;
 
 import java.util.function.Consumer;
@@ -43,7 +44,7 @@ public class NeoIpSeeApi {
     public static String getRegion(Player player) {
         String ip = IpUtil.getIp(player);
         if (ip == null) {
-            return getStr("0");
+            return RegionUtil.getUnknownText();
         }
         String region = IpUtil.getIpRegion(ip);
         return getStr(region);
@@ -58,7 +59,7 @@ public class NeoIpSeeApi {
     public static void getRegionAsync(Player player, Consumer<String> callback) {
         String ip = IpUtil.getIp(player);
         if (ip == null) {
-            callback.accept(getStr("0"));
+            callback.accept(RegionUtil.getUnknownText());
             return;
         }
         IpUtil.getIpRegionAsync(ip, region -> {
@@ -176,13 +177,13 @@ public class NeoIpSeeApi {
     private static String getRegionPart(Player player, int index) {
         String region = getRegion(player);
         if (region == null || "0".equals(region)) {
-            return getStr("0");
+            return RegionUtil.getUnknownText();
         }
         String[] parts = region.split("\\|", 5);
         if (parts.length > index) {
             return getStr(parts[index]);
         }
-        return getStr("0");
+        return RegionUtil.getUnknownText();
     }
 
     /**
@@ -195,26 +196,26 @@ public class NeoIpSeeApi {
     private static void getRegionPartAsync(Player player, int index, Consumer<String> callback) {
         getRegionAsync(player, region -> {
             if (region == null || "0".equals(region)) {
-                callback.accept(getStr("0"));
+                callback.accept(RegionUtil.getUnknownText());
                 return;
             }
             String[] parts = region.split("\\|", 5);
             if (parts.length > index) {
                 callback.accept(getStr(parts[index]));
             } else {
-                callback.accept(getStr("0"));
+                callback.accept(RegionUtil.getUnknownText());
             }
         });
     }
 
     /**
-     * 获取字符串，如果为空则返回"0"
+     * 获取字符串，如果为空或未知则返回未知值
      *
      * @param str 字符串
      * @return 处理后的字符串
      */
     private static String getStr(String str) {
-        return str == null || str.isEmpty() ? "0" : str;
+        return RegionUtil.getSafeString(str);
     }
 
 }

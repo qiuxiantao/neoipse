@@ -1,9 +1,10 @@
 package cn.handyplus.neoipse.strategy.impl;
 
 import cn.handyplus.lib.util.MessageUtil;
-import cn.handyplus.neoipse.strategy.IpDataSource;
-import cn.handyplus.neoipse.util.ExceptionUtil;
 import cn.handyplus.neoipse.http.HttpManager;
+import cn.handyplus.neoipse.strategy.AbstractIpDataSource;
+import cn.handyplus.neoipse.util.ExceptionUtil;
+import cn.handyplus.neoipse.util.RegionUtil;
 import cn.handyplus.neoipse.validation.ValidationManager;
 import org.bukkit.ChatColor;
 import org.json.JSONObject;
@@ -16,20 +17,25 @@ import java.util.function.Consumer;
  *
  * @author 滔天
  */
-public class IpPlusDataSource implements IpDataSource {
+public class IpPlusDataSource extends AbstractIpDataSource {
 
     private final HttpManager httpManager = HttpManager.getInstance();
     private final ValidationManager validationManager = ValidationManager.getInstance();
 
     @Override
-    public String getRegion(String ip) {
+    protected String getDataSourceName() {
+        return "IPPLUS";
+    }
+
+    @Override
+    protected String doGetRegion(String ip) {
         try {
             // 验证并清理IP地址
             ip = validationManager.sanitizeIp(ip);
             if (ip == null) {
                 return null;
             }
-            
+
             String url = "https://api.ip.plus/" + ip;
             String response = httpManager.get(url);
 
@@ -51,27 +57,27 @@ public class IpPlusDataSource implements IpDataSource {
                 return null;
             }
 
-            String country = getJsonString(data, "country");
-            String subdivisions = getJsonString(data, "subdivisions");
-            String city = getJsonString(data, "city");
-            String asName = getJsonString(data, "as_name");
+            String country = RegionUtil.getJsonString(data, "country");
+            String subdivisions = RegionUtil.getJsonString(data, "subdivisions");
+            String city = RegionUtil.getJsonString(data, "city");
+            String asName = RegionUtil.getJsonString(data, "as_name");
 
-            return country + "|" + subdivisions + "|" + city + "|" + asName + "|未知";
+            return country + "|" + subdivisions + "|" + city + "|" + asName + "|" + RegionUtil.getUnknownText();
         } catch (Exception e) {
             return ExceptionUtil.getInstance().handleException("IpPlusDataSource.getRegion", e, null);
         }
     }
 
     @Override
-    public void getRegionAsync(String ip, Consumer<String> callback) {
+    protected void doGetRegionAsync(String ip, Consumer<String> callback) {
         // 验证并清理IP地址
-        ip = validationManager.sanitizeIp(ip);
-        if (ip == null) {
+        final String sanitizedIp = validationManager.sanitizeIp(ip);
+        if (sanitizedIp == null) {
             callback.accept(null);
             return;
         }
-        
-        httpManager.getAsync("https://api.ip.plus/" + ip, response -> {
+
+        httpManager.getAsync("https://api.ip.plus/" + sanitizedIp, response -> {
             try {
                 if (response == null) {
                     callback.accept(null);
@@ -94,12 +100,12 @@ public class IpPlusDataSource implements IpDataSource {
                     return;
                 }
 
-                String country = getJsonString(data, "country");
-                String subdivisions = getJsonString(data, "subdivisions");
-                String city = getJsonString(data, "city");
-                String asName = getJsonString(data, "as_name");
+                String country = RegionUtil.getJsonString(data, "country");
+                String subdivisions = RegionUtil.getJsonString(data, "subdivisions");
+                String city = RegionUtil.getJsonString(data, "city");
+                String asName = RegionUtil.getJsonString(data, "as_name");
 
-                callback.accept(country + "|" + subdivisions + "|" + city + "|" + asName + "|未知");
+                callback.accept(country + "|" + subdivisions + "|" + city + "|" + asName + "|" + RegionUtil.getUnknownText());
             } catch (Exception e) {
                 ExceptionUtil.getInstance().handleException("IpPlusDataSource.getRegionAsync", e);
                 callback.accept(null);
@@ -107,25 +113,5 @@ public class IpPlusDataSource implements IpDataSource {
         });
     }
 
-    /**
-     * 安全获取JSON字符串值
-     *
-     * @param json JSON对象
-     * @param key 键名
-     * @return 字符串值，如果不存在或为空返回"未知"
-     */
-    private String getJsonString(JSONObject json, String key) {
-        try {
-            if (json.has(key)) {
-                String value = json.getString(key);
-                if (value != null && !value.isEmpty()) {
-                    return value;
-                }
-            }
-        } catch (Exception e) {
-            // 忽略解析异常
-        }
-        return "未知";
-    }
-
 }
+

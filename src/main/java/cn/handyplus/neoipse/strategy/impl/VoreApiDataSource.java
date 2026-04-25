@@ -1,14 +1,14 @@
 package cn.handyplus.neoipse.strategy.impl;
 
 import cn.handyplus.lib.util.MessageUtil;
-import cn.handyplus.neoipse.strategy.IpDataSource;
+import cn.handyplus.neoipse.http.HttpManager;
+import cn.handyplus.neoipse.strategy.AbstractIpDataSource;
+import cn.handyplus.neoipse.util.ExceptionUtil;
+import cn.handyplus.neoipse.util.RegionUtil;
+import cn.handyplus.neoipse.validation.ValidationManager;
 import org.bukkit.ChatColor;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.function.Consumer;
 
 /**
@@ -16,33 +16,39 @@ import java.util.function.Consumer;
  *
  * @author 滔天
  */
-public class VoreApiDataSource implements IpDataSource {
+public class VoreApiDataSource extends AbstractIpDataSource {
+
+    private final HttpManager httpManager = HttpManager.getInstance();
+    private final ValidationManager validationManager = ValidationManager.getInstance();
 
     @Override
-    public String getRegion(String ip) {
-        try {
-            URL url = new URL("https://api.vore.top/api/ip?ip=" + ip);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
+    protected String getDataSourceName() {
+        return "VOREAPI";
+    }
 
-            if (conn.getResponseCode() != 200) {
-                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] VoreApi请求失败: " + conn.getResponseCode());
+    @Override
+    protected String doGetRegion(String ip) {
+        try {
+            // 验证并清理IP地址
+            ip = validationManager.sanitizeIp(ip);
+            if (ip == null) {
                 return null;
             }
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
+            String url = "https://api.vore.top/ip?ip=" + ip;
+            String response = httpManager.get(url);
+
+            if (response == null) {
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] VoreApi查询失败: api.vore.top");
+                return null;
             }
-            reader.close();
 
-            JSONObject json = new JSONObject(response.toString());
+            JSONObject json = new JSONObject(response);
 
-            if (json.optInt("code") != 200) {
+            int code = json.optInt("code");
+            if (code != 200) {
+                String message = json.optString("msg");
+                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] VoreApi错误: " + message);
                 return null;
             }
 
@@ -51,50 +57,63 @@ public class VoreApiDataSource implements IpDataSource {
                 return null;
             }
 
-            String country = getJsonString(data, "country");
-            String province = getJsonString(data, "province");
-            String city = getJsonString(data, "city");
-            String isp = getJsonString(data, "isp");
+            String country = RegionUtil.getJsonString(data, "country");
+            String province = RegionUtil.getJsonString(data, "province");
+            String city = RegionUtil.getJsonString(data, "city");
+            String isp = RegionUtil.getJsonString(data, "isp");
 
-            return country + "|" + province + "|" + city + "|" + isp + "|未知";
+            return country + "|" + province + "|" + city + "|" + isp + "|" + RegionUtil.getUnknownText();
         } catch (Exception e) {
-            MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] VoreApi查询失败: " + e.getMessage());
-            return null;
+            return ExceptionUtil.getInstance().handleException("VoreApiDataSource.getRegion", e, null);
         }
     }
 
     @Override
-    public void getRegionAsync(String ip, Consumer<String> callback) {
-        new Thread(() -> {
+    protected void doGetRegionAsync(String ip, Consumer<String> callback) {
+        // 验证并清理IP地址
+        final String sanitizedIp = validationManager.sanitizeIp(ip);
+        if (sanitizedIp == null) {
+            callback.accept(null);
+            return;
+        }
+
+        String url = "https://api.vore.top/ip?ip=" + sanitizedIp;
+        httpManager.getAsync(url, response -> {
             try {
-                String result = getRegion(ip);
-                callback.accept(result);
+                if (response == null) {
+                    MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] VoreApi查询失败: api.vore.top");
+                    callback.accept(null);
+                    return;
+                }
+
+                JSONObject json = new JSONObject(response);
+
+                int code = json.optInt("code");
+                if (code != 200) {
+                    String message = json.optString("msg");
+                    MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] VoreApi错误: " + message);
+                    callback.accept(null);
+                    return;
+                }
+
+                JSONObject data = json.optJSONObject("data");
+                if (data == null) {
+                    callback.accept(null);
+                    return;
+                }
+
+                String country = RegionUtil.getJsonString(data, "country");
+                String province = RegionUtil.getJsonString(data, "province");
+                String city = RegionUtil.getJsonString(data, "city");
+                String isp = RegionUtil.getJsonString(data, "isp");
+
+                callback.accept(country + "|" + province + "|" + city + "|" + isp + "|" + RegionUtil.getUnknownText());
             } catch (Exception e) {
-                MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] VoreApi异步查询失败: " + e.getMessage());
+                ExceptionUtil.getInstance().handleException("VoreApiDataSource.getRegionAsync", e);
                 callback.accept(null);
             }
-        }, "NeoIpSee-Async-Query").start();
-    }
-
-    /**
-     * 安全获取JSON字符串值
-     *
-     * @param json JSON对象
-     * @param key 键名
-     * @return 字符串值，如果不存在或为空返回"未知"
-     */
-    private String getJsonString(JSONObject json, String key) {
-        try {
-            if (json.has(key)) {
-                String value = json.getString(key);
-                if (value != null && !value.isEmpty()) {
-                    return value;
-                }
-            }
-        } catch (Exception e) {
-            // 忽略解析异常
-        }
-        return "未知";
+        });
     }
 
 }
+

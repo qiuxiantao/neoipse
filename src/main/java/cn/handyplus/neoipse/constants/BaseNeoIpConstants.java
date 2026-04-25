@@ -20,9 +20,4 @@ public abstract class BaseNeoIpConstants {
      */
     public final static Map<UUID, Boolean> PLAYER_SHOW_MAP = new ConcurrentHashMap<>();
 
-    /**
-     * 未知
-     */
-    public final static String UNKNOWN = "未知";
-
 }

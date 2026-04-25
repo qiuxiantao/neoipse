@@ -34,19 +34,14 @@ public class FallbackIpDataSource implements IpDataSource {
             try {
                 String region = dataSource.getRegion(ip);
                 if (region != null && !region.isEmpty()) {
-                    // 记录成功结果
-                    dataSourceManager.recordQueryResult(dataSourceName, true);
+                    // 不再重复记录，因为 AbstractIpDataSource 会自动记录
                     if (triedDataSources.size() > 1) {
                         MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] " + dataSourceName + " 数据源成功返回结果");
                     }
                     return region;
-                } else {
-                    // 记录失败结果
-                    dataSourceManager.recordQueryResult(dataSourceName, false);
                 }
             } catch (Exception e) {
-                // 记录失败结果
-                dataSourceManager.recordQueryResult(dataSourceName, false);
+                // 不再重复记录，因为 AbstractIpDataSource 会自动记录
                 MessageUtil.sendConsoleMessage(ChatColor.YELLOW + "[neoipSee] " + dataSourceName + " 数据源查询失败: " + e.getMessage());
             }
         }

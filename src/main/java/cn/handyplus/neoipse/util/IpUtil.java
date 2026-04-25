@@ -3,20 +3,9 @@ package cn.handyplus.neoipse.util;
 import cn.handyplus.lib.core.StrUtil;
 import cn.handyplus.neoipse.cache.CacheManager;
 import cn.handyplus.neoipse.strategy.IpDataSource;
-import cn.handyplus.neoipse.strategy.impl.FallbackIpDataSource;
-import cn.handyplus.neoipse.strategy.impl.Ip9DataSource;
-import cn.handyplus.neoipse.strategy.impl.IpApiDataSource;
-import cn.handyplus.neoipse.strategy.impl.IpInfoDataSource;
-import cn.handyplus.neoipse.strategy.impl.IpPlus360DataSource;
-import cn.handyplus.neoipse.strategy.impl.IpPlusDataSource;
-import cn.handyplus.neoipse.strategy.impl.IpQueryDataSource;
-import cn.handyplus.neoipse.strategy.impl.VoreApiDataSource;
-import cn.handyplus.neoipse.strategy.impl.WhoisDataSource;
 import cn.handyplus.neoipse.validation.ValidationManager;
 import org.bukkit.entity.Player;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
@@ -38,9 +27,9 @@ public class IpUtil {
     private static final ValidationManager VALIDATION_MANAGER = ValidationManager.getInstance();
 
     /**
-     * 数据源实例缓存
+     * 数据源管理器
      */
-    private static final Map<String, IpDataSource> DATA_SOURCE_CACHE = new ConcurrentHashMap<>();
+    private static final DataSourceManager DATA_SOURCE_MANAGER = DataSourceManager.getInstance();
 
     /**
      * 获取玩家IP
@@ -76,11 +65,12 @@ public class IpUtil {
         }
 
         // 获取配置的数据源类型
-        String dataSource = ConfigCacheUtil.getString("dataSource", "fallback");
+        String dataSourceName = ConfigCacheUtil.getString("dataSource", "fallback");
+        
         try {
-            // 获取或创建数据源实例
-            IpDataSource dataSourceImpl = getDataSourceInstance(dataSource);
-            String region = dataSourceImpl.getRegion(ip);
+            // 使用 DataSourceManager 获取数据源实例
+            IpDataSource dataSource = DATA_SOURCE_MANAGER.getDataSourceByName(dataSourceName);
+            String region = dataSource.getRegion(ip);
 
             // 缓存结果
             if (region != null) {
@@ -115,13 +105,14 @@ public class IpUtil {
         }
 
         // 获取配置的数据源类型
-        String dataSource = ConfigCacheUtil.getString("dataSource", "fallback");
+        final String dataSourceName = ConfigCacheUtil.getString("dataSource", "fallback");
+        
         try {
-            // 获取或创建数据源实例
-            IpDataSource dataSourceImpl = getDataSourceInstance(dataSource);
+            // 使用 DataSourceManager 获取数据源实例
+            IpDataSource dataSource = DATA_SOURCE_MANAGER.getDataSourceByName(dataSourceName);
 
             // 异步查询
-            dataSourceImpl.getRegionAsync(sanitizedIp, region -> {
+            dataSource.getRegionAsync(sanitizedIp, region -> {
                 // 缓存结果
                 if (region != null) {
                     CACHE_MANAGER.put(sanitizedIp, region);
@@ -132,57 +123,6 @@ public class IpUtil {
             ExceptionUtil.getInstance().handleException("IpUtil.getIpRegionAsync", e);
             callback.accept(null);
         }
-    }
-
-    /**
-     * 获取数据源实例
-     *
-     * @param dataSource 数据源名称
-     * @return 数据源实例
-     * @throws Exception 异常
-     */
-    private static IpDataSource getDataSourceInstance(String dataSource) throws Exception {
-        if (DATA_SOURCE_CACHE.containsKey(dataSource)) {
-            return DATA_SOURCE_CACHE.get(dataSource);
-        }
-
-        IpDataSource dataSourceImpl;
-
-        switch (dataSource.toLowerCase()) {
-            case "fallback":
-                dataSourceImpl = new FallbackIpDataSource();
-                break;
-            case "ipplus":
-                dataSourceImpl = new IpPlusDataSource();
-                break;
-            case "ipinfo":
-                dataSourceImpl = new IpInfoDataSource();
-                break;
-            case "ip9":
-                dataSourceImpl = new Ip9DataSource();
-                break;
-            case "ipquery":
-                dataSourceImpl = new IpQueryDataSource();
-                break;
-            case "ipplus360":
-                dataSourceImpl = new IpPlus360DataSource();
-                break;
-            case "ipapi":
-                dataSourceImpl = new IpApiDataSource();
-                break;
-            case "whois":
-                dataSourceImpl = new WhoisDataSource();
-                break;
-            case "voreapi":
-                dataSourceImpl = new VoreApiDataSource();
-                break;
-            default:
-                // 默认使用fallback
-                dataSourceImpl = new FallbackIpDataSource();
-        }
-
-        DATA_SOURCE_CACHE.put(dataSource, dataSourceImpl);
-        return dataSourceImpl;
     }
 
     /**
@@ -200,7 +140,6 @@ public class IpUtil {
      */
     public static void clearAllCache() {
         CACHE_MANAGER.clearAllCache();
-        DATA_SOURCE_CACHE.clear();
     }
 
     /**
@@ -209,11 +148,8 @@ public class IpUtil {
     public static void reloadCacheSize() {
         try {
             int size = ConfigCacheUtil.getInt("cache.maxSize", 1000);
-            if (size > 0) {
-                CACHE_MANAGER.setMaxCacheSize(size);
-            }
+            CACHE_MANAGER.setMaxCacheSize(size);
         } catch (Exception e) {
-            // 测试环境中NeoIpSee.INSTANCE可能为null，使用默认值
             CACHE_MANAGER.setMaxCacheSize(1000);
         }
     }
@@ -229,3 +165,4 @@ public class IpUtil {
     }
 
 }
+

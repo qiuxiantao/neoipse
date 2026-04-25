@@ -4,7 +4,9 @@ import cn.handyplus.lib.core.StrUtil;
 import org.bukkit.configuration.file.FileConfiguration;
 import cn.handyplus.neoipse.NeoIpSee;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,7 +53,12 @@ public class ConfigCacheUtil {
     public static int getInt(String path, int def) {
         Object value = CONFIG_CACHE.get(path);
         if (value != null) {
-            return Integer.parseInt(String.valueOf(value));
+            try {
+                return Integer.parseInt(String.valueOf(value));
+            } catch (NumberFormatException e) {
+                // 类型转换失败，清除缓存并重新获取
+                CONFIG_CACHE.remove(path);
+            }
         }
         FileConfiguration config = NeoIpSee.INSTANCE.getConfig();
         int configValue = config.getInt(path, def);
@@ -73,6 +80,27 @@ public class ConfigCacheUtil {
         }
         FileConfiguration config = NeoIpSee.INSTANCE.getConfig();
         boolean configValue = config.getBoolean(path, def);
+        CONFIG_CACHE.put(path, configValue);
+        return configValue;
+    }
+
+    /**
+     * 获取字符串列表配置
+     *
+     * @param path 路径
+     * @return 配置值列表
+     */
+    @SuppressWarnings("unchecked")
+    public static List<String> getStringList(String path) {
+        Object value = CONFIG_CACHE.get(path);
+        if (value != null && value instanceof List) {
+            return (List<String>) value;
+        }
+        FileConfiguration config = NeoIpSee.INSTANCE.getConfig();
+        List<String> configValue = config.getStringList(path);
+        if (configValue == null) {
+            configValue = new ArrayList<>();
+        }
         CONFIG_CACHE.put(path, configValue);
         return configValue;
     }
@@ -103,6 +131,8 @@ public class ConfigCacheUtil {
         NeoIpSee.INSTANCE.reloadConfig();
         // 重新检查配置
         ConfigCheckUtil.checkAndFixConfig();
+        // 重新加载缓存大小配置
+        IpUtil.reloadCacheSize();
     }
 
 }

@@ -1,6 +1,7 @@
 package cn.handyplus.neoipse.http;
 
 import cn.handyplus.lib.util.MessageUtil;
+import cn.handyplus.neoipse.util.RateLimiter;
 import org.bukkit.ChatColor;
 
 import java.io.IOException;
@@ -11,11 +12,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
@@ -75,7 +74,7 @@ public class HttpManager {
                 .connectTimeout(CONNECT_TIMEOUT)
                 .executor(executorService)
                 .build();
-        this.rateLimiter = new RateLimiter();
+        this.rateLimiter = RateLimiter.getInstance();
     }
 
     /**
@@ -237,58 +236,6 @@ public class HttpManager {
         } catch (Exception e) {
             // 忽略消息发送错误
             System.out.println(message);
-        }
-    }
-
-    /**
-     * 速率限制器
-     */
-    private static class RateLimiter {
-
-        /**
-         * 速率限制存储
-         * key: API名称
-         * value: 调用时间戳列表
-         */
-        private final Map<String, Map<Long, Integer>> rateLimits = new ConcurrentHashMap<>();
-
-        /**
-         * 检查是否允许调用API
-         *
-         * @param apiName API名称
-         * @return 是否允许调用
-         */
-        public boolean allow(String apiName) {
-            // 默认配置：每分钟最多60次调用（每秒1次）
-            return allow(apiName, 60, TimeUnit.MINUTES.toMillis(1));
-        }
-
-        /**
-         * 检查是否允许调用API
-         *
-         * @param apiName API名称
-         * @param maxCalls 最大调用次数
-         * @param timeWindow 时间窗口（毫秒）
-         * @return 是否允许调用
-         */
-        public boolean allow(String apiName, int maxCalls, long timeWindow) {
-            long currentTime = System.currentTimeMillis();
-            Map<Long, Integer> timeMap = rateLimits.computeIfAbsent(apiName, k -> new ConcurrentHashMap<>());
-
-            // 清理过期的调用记录
-            timeMap.keySet().removeIf(timestamp -> currentTime - timestamp > timeWindow);
-
-            // 计算当前时间窗口内的调用次数
-            int totalCalls = timeMap.values().stream().mapToInt(Integer::intValue).sum();
-
-            if (totalCalls < maxCalls) {
-                // 允许调用，记录调用
-                timeMap.put(currentTime, timeMap.getOrDefault(currentTime, 0) + 1);
-                return true;
-            } else {
-                // 超过限制，不允许调用
-                return false;
-            }
         }
     }
 

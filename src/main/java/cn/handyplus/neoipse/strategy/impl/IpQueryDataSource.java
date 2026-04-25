@@ -1,9 +1,9 @@
 package cn.handyplus.neoipse.strategy.impl;
 
 import cn.handyplus.lib.util.MessageUtil;
-import cn.handyplus.neoipse.strategy.IpDataSource;
-import cn.handyplus.neoipse.util.ExceptionUtil;
 import cn.handyplus.neoipse.http.HttpManager;
+import cn.handyplus.neoipse.strategy.AbstractIpDataSource;
+import cn.handyplus.neoipse.util.RegionUtil;
 import cn.handyplus.neoipse.validation.ValidationManager;
 import org.bukkit.ChatColor;
 import org.json.JSONObject;
@@ -12,26 +12,29 @@ import java.util.function.Consumer;
 
 /**
  * IPQuery数据源
- * API文档: https://ipquery.io/
  *
  * @author 滔天
  */
-public class IpQueryDataSource implements IpDataSource {
+public class IpQueryDataSource extends AbstractIpDataSource {
 
     private final HttpManager httpManager = HttpManager.getInstance();
     private final ValidationManager validationManager = ValidationManager.getInstance();
 
     @Override
-    public String getRegion(String ip) {
+    protected String getDataSourceName() {
+        return "IPQUERY";
+    }
+
+    @Override
+    protected String doGetRegion(String ip) {
         try {
             // 验证并清理IP地址
             ip = validationManager.sanitizeIp(ip);
             if (ip == null) {
                 return null;
             }
-            
-            // IPQuery API格式: https://api.ipquery.io/{ip}
-            String url = "https://api.ipquery.io/" + ip;
+
+            String url = "https://ipquery.io/id/" + ip;
             String response = httpManager.get(url);
 
             if (response == null) {
@@ -40,32 +43,27 @@ public class IpQueryDataSource implements IpDataSource {
 
             JSONObject json = new JSONObject(response);
 
-            JSONObject location = json.optJSONObject("location");
-            if (location == null) {
-                return null;
-            }
+            String country = RegionUtil.getJsonString(json, "country");
+            String state = RegionUtil.getJsonString(json, "state");
+            String city = RegionUtil.getJsonString(json, "city");
+            String isp = RegionUtil.getJsonString(json, "isp");
 
-            String country = getJsonString(location, "country");
-            String state = getJsonString(location, "state");
-            String city = getJsonString(location, "city");
-            String isp = getJsonString(json, "isp");
-
-            return country + "|" + state + "|" + city + "|" + isp + "|未知";
+            return country + "|" + state + "|" + city + "|" + isp + "|" + RegionUtil.getUnknownText();
         } catch (Exception e) {
-            return ExceptionUtil.getInstance().handleException("IpQueryDataSource.getRegion", e, null);
+            return cn.handyplus.neoipse.util.ExceptionUtil.getInstance().handleException("IpQueryDataSource.getRegion", e, null);
         }
     }
 
     @Override
-    public void getRegionAsync(String ip, Consumer<String> callback) {
+    protected void doGetRegionAsync(String ip, Consumer<String> callback) {
         // 验证并清理IP地址
-        ip = validationManager.sanitizeIp(ip);
-        if (ip == null) {
+        final String sanitizedIp = validationManager.sanitizeIp(ip);
+        if (sanitizedIp == null) {
             callback.accept(null);
             return;
         }
-        
-        String url = "https://api.ipquery.io/" + ip;
+
+        String url = "https://ipquery.io/id/" + sanitizedIp;
         httpManager.getAsync(url, response -> {
             try {
                 if (response == null) {
@@ -75,44 +73,18 @@ public class IpQueryDataSource implements IpDataSource {
 
                 JSONObject json = new JSONObject(response);
 
-                JSONObject location = json.optJSONObject("location");
-                if (location == null) {
-                    callback.accept(null);
-                    return;
-                }
+                String country = RegionUtil.getJsonString(json, "country");
+                String state = RegionUtil.getJsonString(json, "state");
+                String city = RegionUtil.getJsonString(json, "city");
+                String isp = RegionUtil.getJsonString(json, "isp");
 
-                String country = getJsonString(location, "country");
-                String state = getJsonString(location, "state");
-                String city = getJsonString(location, "city");
-                String isp = getJsonString(json, "isp");
-
-                callback.accept(country + "|" + state + "|" + city + "|" + isp + "|未知");
+                callback.accept(country + "|" + state + "|" + city + "|" + isp + "|" + RegionUtil.getUnknownText());
             } catch (Exception e) {
-                ExceptionUtil.getInstance().handleException("IpQueryDataSource.getRegionAsync", e);
+                cn.handyplus.neoipse.util.ExceptionUtil.getInstance().handleException("IpQueryDataSource.getRegionAsync", e);
                 callback.accept(null);
             }
         });
     }
 
-    /**
-     * 安全获取JSON字符串值
-     *
-     * @param json JSON对象
-     * @param key 键名
-     * @return 字符串值，如果不存在或为空返回"未知"
-     */
-    private String getJsonString(JSONObject json, String key) {
-        try {
-            if (json.has(key)) {
-                String value = json.getString(key);
-                if (value != null && !value.isEmpty()) {
-                    return value;
-                }
-            }
-        } catch (Exception e) {
-            // 忽略解析异常
-        }
-        return "未知";
-    }
-
 }
+

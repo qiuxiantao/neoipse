@@ -3,9 +3,8 @@ package cn.handyplus.neoipse.hook;
 import cn.handyplus.lib.util.MessageUtil;
 import cn.handyplus.neoipse.api.NeoIpSeeApi;
 import cn.handyplus.neoipse.constants.BaseNeoIpConstants;
-import cn.handyplus.neoipse.util.IpUtil;
+import cn.handyplus.neoipse.util.RegionUtil;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -47,10 +46,8 @@ public class PlaceholderUtil extends PlaceholderExpansion {
             return "";
         }
 
-        // 从缓存中获取地域信息
         String region = BaseNeoIpConstants.PLAYER_REGION_MAP.get(player.getUniqueId().toString());
         if (region == null) {
-            // 如果缓存中没有，同步获取（为了保证占位符能立即返回）
             region = NeoIpSeeApi.getRegion(player);
         }
 
@@ -81,13 +78,17 @@ public class PlaceholderUtil extends PlaceholderExpansion {
      */
     private String getRegionPart(String region, int index) {
         if (region == null || "0".equals(region)) {
-            return "0";
+            return RegionUtil.getUnknownText();
         }
         String[] parts = region.split("\\|", 5);
         if (parts.length > index) {
-            return parts[index];
+            String value = parts[index];
+            if (RegionUtil.isUnknownValue(value)) {
+                return RegionUtil.getUnknownText();
+            }
+            return value;
         }
-        return "0";
+        return RegionUtil.getUnknownText();
     }
 
     /**
