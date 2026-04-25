@@ -355,7 +355,7 @@ A: 在 `config.yml` 中修改 `dataSource` 配置项，然后使用 `/neoipse re
 
 ### Q: 插件支持哪些 Minecraft 版本？
 
-A: 支持 Spigot/Paper 1.8.8 及以上版本，推荐使用 1.21+ 版本以获得最佳性能。
+A: 支持 Spigot/Paper 1.21.1 及以上版本，推荐使用 1.21+ 版本以获得最佳性能。
 
 ### Q: 需要什么版本的 Java？
 
@@ -404,7 +404,7 @@ A: 请在 GitHub 仓库的 Issues 页面提交 bug 报告或功能建议。
 
 ## 更新日志
 
-### v2.0.0 (2026-04-25)
+### v2.0.1 (2026-04-25)
 - 重构项目结构，采用模块化设计
 - 创建 CacheManager、HttpManager、ValidationManager 等核心管理器
 - 优化多数据源切换逻辑
