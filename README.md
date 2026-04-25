@@ -6,7 +6,7 @@
 一个功能强大、高性能的 Minecraft 服务器 IP 地域查询插件
 
 [![Java Version](https://img.shields.io/badge/Java-17+-green.svg)](https://www.oracle.com/java/technologies/downloads/)
-[![Minecraft Version](https://img.shields.io/badge/Minecraft-1.20.4+-brightgreen.svg)](https://www.spigotmc.org/)
+[![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21+-brightgreen.svg)](https://www.spigotmc.org/)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/qiuxiantao/neoipse)](https://github.com/qiuxiantao/neoipse/issues)
 [![GitHub stars](https://img.shields.io/github/stars/qiuxiantao/neoipse)](https://github.com/qiuxiantao/neoipse/stargazers)
